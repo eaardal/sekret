@@ -43,13 +43,6 @@ else
   JQ="$SEKRET_DIR/bin/jq"
 fi
 
-# Location of op to use. Recommend using bundled op for versioning stability.
-if [ -n "$SEKRET_OP" ]; then
-  OP=$SEKRET_OP
-else
-  OP="$SEKRET_DIR/bin/op"
-fi
-
 # Authenticate using 1Password's biometrics: https://developer.1password.com/docs/cli/about-biometric-unlock#set-the-biometric-unlock-environment-variable
 # Biometric unlock must be enabled in the 1Password UI app first: Preferences -> Developer -> Biometric unlock for 1Password CLI
 if [ -z "$OP_BIOMETRIC_UNLOCK_ENABLED" ]; then
@@ -65,11 +58,32 @@ if [ -z "$SEKRET_1PASS_ACCOUNT" ]; then
   SEKRET_1PASS_ACCOUNT="my.1password.com"
 fi
 
+if [ "$DEBUG" == "true" ]; then
+  echo "Environment:"
+  echo "------"
+  echo "SEKRET_DIR: $SEKRET_DIR"
+  echo "SECRET_ITEM: $SECRET_ITEM"
+  echo "SEKRET_1PASS_ITEM: $SEKRET_1PASS_ITEM"
+  echo "SEKRET_1PASS_VAULT: $SEKRET_1PASS_VAULT"
+  echo "SEKRET_1PASS_ACCOUNT: $SEKRET_1PASS_ACCOUNT"
+  echo "SEKRET_JQ: $SEKRET_JQ"
+  echo "JQ: $JQ"
+  echo "OP_BIOMETRIC_UNLOCK_ENABLED: $OP_BIOMETRIC_UNLOCK_ENABLED"
+  echo "Args: $*"
+  echo "Arg 0: $0"
+  echo "Arg 1: $1"
+  echo "Arg 2: $2"
+  echo "Arg 3: $3"
+  echo "Arg 4: $4"
+  echo "------"
+  echo ""
+fi
+
 item_exists() {
   local result
 
   # Query 1P to see if this item exists. Also redirect stderr to result to prevent the default error when an item does not exist.
-  result=$($OP item get "$SECRET_ITEM" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
+  result=$(op item get "$SECRET_ITEM" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
   if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't an item"* ]]; then
     echo "false"
@@ -85,7 +99,7 @@ field_exists() {
   local result
 
   # Query 1P to see if this field exists in the given item. Also redirect stderr to result to prevent the default error from writing to the terminal when an item does not exist.
-  result=$($OP item get "$SECRET_ITEM" --fields label="$fieldPath" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
+  result=$(op item get "$SECRET_ITEM" --fields label="$fieldPath" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
   # If the field does not exist in the item, it will throw an error like "[ERROR] 2023/06/16 14:25:34 "my.secret/to/something" isn't a field in the ".sekret" item".
   # This checks for partial matches against that error, which indicates wether the field exists or not.
@@ -103,7 +117,7 @@ init() {
 
   if [[ "$exists" == "false" ]]; then
     echo "Could not find the item $SECRET_ITEM in 1Password, creating it"
-    $OP item create \
+    op item create \
       --category "Secure Note" \
       --title "$SECRET_ITEM" \
       --vault "$SEKRET_1PASS_VAULT" \
@@ -119,7 +133,7 @@ list() {
   local itemJson
   local fields
 
-  itemJson=$($OP item get "$SECRET_ITEM" --format json --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
+  itemJson=$(op item get "$SECRET_ITEM" --format json --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
 
   # 1. .fields[] - Select the items in the array named fields.
   # 2. select(.label != "notesPlain") - Don't include the built-in field notesPlain which is for plain text notes (think of "select" as "where" or "filter" in other languages).
@@ -160,11 +174,11 @@ add_secret_value() {
     return
   elif [ "$exists" == "true" ] && [ "$force" == "true" ]; then
     # Edit the $SECRET_ITEM item by appending another field and field value
-    $OP item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+    op item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
     echo "$fieldPath was edited"
   elif [ "$exists" == "false" ]; then
     # Use the 'edit' command since we're only appending new labels to the same $SECRET_ITEM item. The 'create' command would create an entirely new item instead.
-    $OP item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+    op item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
     echo "$fieldPath was created"
   fi
 }
@@ -198,7 +212,7 @@ get() {
   if [ -z "$2" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local field=$2
 
-  $OP item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+  op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
 }
 
 case $1 in

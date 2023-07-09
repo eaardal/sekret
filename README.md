@@ -26,7 +26,8 @@ I re-wrote Sekret to leverage 1Password as storage instead of local files and so
 
 #### 1. Setup 1Password
 
-Biometric unlock must be enabled in the 1Password UI app first: `Preferences -> Developer -> Biometric unlock for 1Password CLI`.
+1. The 1Password CLI (`op`) must be on your PATH.
+2. Biometric unlock must be enabled in the 1Password UI app: `Preferences -> Developer -> Biometric unlock for 1Password CLI`.
 
 See their [biometric unlock docs](https://developer.1password.com/docs/cli/about-biometric-unlock#set-the-biometric-unlock-environment-variable) for more info.
 
@@ -86,7 +87,6 @@ Set these environment variables to override defaults.
 | ---------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `SEKRET_DIR`           | Path to the directory where the `sekret` script is located            | :exclamation: [Required] You must set this in your .zshrc, .bashrc or similar. |
 | `SEKRET_JQ`            | Path to the `jq` executable to use.                                   | `$SEKRET_DIR/bin/jq`                                                           |
-| `SEKRET_OP`            | Path to the `op` (1Password CLI) executable to use.                   | `$SEKRET_DIR/bin/op`                                                           |
 | `SEKRET_1PASS_ITEM`    | Name of the Secure Note in 1Password to store secrets in.             | `.sekret`                                                                      |
 | `SEKRET_1PASS_VAULT`   | Name of the 1Password Vault to use when doing 1Password operations.   | `Private`                                                                      |
 | `SEKRET_1PASS_ACCOUNT` | Name of the 1Password account to use when doing 1Password operations. | `my.1password.com`                                                             |
