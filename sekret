@@ -194,6 +194,16 @@ add() {
     local force="true"
   fi
 
+  # If $fieldValue is a file on disk, read the file's content and use as value
+  if [ -f "$fieldValue" ]; then
+    local filePath="$fieldValue"
+    local fileContent=$(cat "$filePath" | base64)
+    local fileName=$(basename "$filePath")
+
+    # Ensure files are prefixed with "file:" so we can check if we're reading a file when querying the secret later.
+    fieldValue="file:$fileName:$fileContent"
+  fi
+
   # If fieldPath contains "." we assume the part before the dot is the section name and the part after is the field name in that section
   if [[ $fieldPath == *"."* ]]; then
     local section
@@ -212,7 +222,18 @@ get() {
   if [ -z "$2" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local field=$2
 
-  op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+  value=$(op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
+
+  # Check if the value is a file by checking if the content starts with "file:".
+  if [[ "$value" = file:* ]]; then
+    # Get the different parts and base64 decode the file's contents if it is a file.
+    fileName=$(cut -d':' -f2 <<<"$value")
+    fileContent=$(cut -d':' -f3 <<<"$value")
+    echo "$fileContent" | base64 --decode
+  else
+    # Just print the value if it's not a file.
+    echo "$value"
+  fi
 }
 
 case $1 in
