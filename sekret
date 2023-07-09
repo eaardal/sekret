@@ -18,50 +18,50 @@ print_help() {
 # Fail script immediately on any errors
 set -e
 
-if [ -z "$1" ]
-then
-  echo "No command provided, here's the help command instead:";
+if [ -z "$1" ]; then
+  echo "No command provided, here's the help command instead:"
   print_help
   exit 0
 fi
 
-if [ -z "$SEKRET_DIR" ]
-then
-  echo "Environment variable SEKRET_DIR is not set. It should be set to the directory where the 'sekret' executable is stored.";
+if [ -z "$SEKRET_DIR" ]; then
+  echo "Environment variable SEKRET_DIR is not set. It should be set to the directory where the 'sekret' executable is stored."
   print_help
   exit 1
 fi
 
-if [ -n "$SEKRET_1PASS_ITEM" ]
-then
+if [ -n "$SEKRET_1PASS_ITEM" ]; then
   SECRET_ITEM=$SEKRET_1PASS_ITEM
 else
   SECRET_ITEM=".sekret"
 fi
 
 # Location of jq to use. Recommend using bundled jq for versioning stability.
-if [ -n "$SEKRET_JQ" ]
-then
+if [ -n "$SEKRET_JQ" ]; then
   JQ=$SEKRET_JQ
 else
   JQ="$SEKRET_DIR/bin/jq"
 fi
 
+# Location of op to use. Recommend using bundled op for versioning stability.
+if [ -n "$SEKRET_OP" ]; then
+  OP=$SEKRET_OP
+else
+  OP="$SEKRET_DIR/bin/op"
+fi
+
 # Authenticate using 1Password's biometrics: https://developer.1password.com/docs/cli/about-biometric-unlock#set-the-biometric-unlock-environment-variable
 # Biometric unlock must be enabled in the 1Password UI app first: Preferences -> Developer -> Biometric unlock for 1Password CLI
-if [ -z "$OP_BIOMETRIC_UNLOCK_ENABLED" ]
-then
+if [ -z "$OP_BIOMETRIC_UNLOCK_ENABLED" ]; then
   OP_BIOMETRIC_UNLOCK_ENABLED=true
 fi
 
 # Name of the vault in 1Password to use when doing 1Password operations.
-if [ -z "$SEKRET_1PASS_VAULT" ]
-then
+if [ -z "$SEKRET_1PASS_VAULT" ]; then
   SEKRET_1PASS_VAULT="Private"
 fi
 
-if [ -z "$SEKRET_1PASS_ACCOUNT" ]
-then
+if [ -z "$SEKRET_1PASS_ACCOUNT" ]; then
   SEKRET_1PASS_ACCOUNT="my.1password.com"
 fi
 
@@ -69,10 +69,9 @@ item_exists() {
   local result
 
   # Query 1P to see if this item exists. Also redirect stderr to result to prevent the default error when an item does not exist.
-  result=$(op item get "$SECRET_ITEM" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
+  result=$($OP item get "$SECRET_ITEM" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
-  if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't an item"* ]]
-  then
+  if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't an item"* ]]; then
     echo "false"
   else
     echo "true"
@@ -80,18 +79,17 @@ item_exists() {
 }
 
 field_exists() {
-  if [ -z "$1" ]; then echo "No <field> provided" && print_help; fi
+  if [ -z "$1" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local fieldPath=$1
 
   local result
 
   # Query 1P to see if this field exists in the given item. Also redirect stderr to result to prevent the default error from writing to the terminal when an item does not exist.
-  result=$(op item get "$SECRET_ITEM" --fields label="$fieldPath" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
+  result=$($OP item get "$SECRET_ITEM" --fields label="$fieldPath" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
   # If the field does not exist in the item, it will throw an error like "[ERROR] 2023/06/16 14:25:34 "my.secret/to/something" isn't a field in the ".sekret" item".
   # This checks for partial matches against that error, which indicates wether the field exists or not.
-  if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't a field"* ]]
-  then
+  if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't a field"* ]]; then
     echo "false"
   else
     echo "true"
@@ -103,10 +101,9 @@ init() {
 
   exists=$(item_exists 2>&1)
 
-  if [[ "$exists" == "false" ]]
-  then
+  if [[ "$exists" == "false" ]]; then
     echo "Could not find the item $SECRET_ITEM in 1Password, creating it"
-    op item create \
+    $OP item create \
       --category "Secure Note" \
       --title "$SECRET_ITEM" \
       --vault "$SEKRET_1PASS_VAULT" \
@@ -122,7 +119,7 @@ list() {
   local itemJson
   local fields
 
-  itemJson=$(op item get "$SECRET_ITEM" --format json --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
+  itemJson=$($OP item get "$SECRET_ITEM" --format json --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
 
   # 1. .fields[] - Select the items in the array named fields.
   # 2. select(.label != "notesPlain") - Don't include the built-in field notesPlain which is for plain text notes (think of "select" as "where" or "filter" in other languages).
@@ -134,8 +131,7 @@ list() {
     section=$(echo "$i" | $JQ -r '.section')
     ref=$(echo "$i" | $JQ -r '.ref')
 
-    if [ -z "$section" ] || [ "$section" = "null" ]
-    then
+    if [ -z "$section" ] || [ "$section" = "null" ]; then
       echo "$field -- $ref"
     else
       echo "$section.$field -- $ref"
@@ -144,14 +140,13 @@ list() {
 }
 
 add_secret_value() {
-  if [ -z "$1" ]; then echo "No <field> provided" && print_help; fi
+  if [ -z "$1" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local fieldPath=$1
 
-  if [ -z "$2" ]; then echo "No <value> provided" && print_help; fi
+  if [ -z "$2" ]; then echo "No <value> provided" && print_help && exit 1; fi
   local fieldValue=$2
 
-  if [ -n "$3" ]
-  then
+  if [ -n "$3" ]; then
     local force="$3"
   fi
 
@@ -160,43 +155,38 @@ add_secret_value() {
 
   exists=$(field_exists "$fieldPath")
 
-  if [ "$exists" == "true" ] && [ "$force" != "true" ]
-  then
+  if [ "$exists" == "true" ] && [ "$force" != "true" ]; then
     echo "Field $fieldPath already exists. Use another name or supply the --force flag to overwrite the existing value"
     return
-  elif [ "$exists" == "true" ] && [ "$force" == "true" ]
-  then
+  elif [ "$exists" == "true" ] && [ "$force" == "true" ]; then
     # Edit the $SECRET_ITEM item by appending another field and field value
-    op item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+    $OP item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
     echo "$fieldPath was edited"
-  elif [ "$exists" == "false" ]
-  then
+  elif [ "$exists" == "false" ]; then
     # Use the 'edit' command since we're only appending new labels to the same $SECRET_ITEM item. The 'create' command would create an entirely new item instead.
-    op item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+    $OP item edit "$SECRET_ITEM" "$fieldPath=$fieldValue" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
     echo "$fieldPath was created"
   fi
 }
 
 add() {
-  if [ -z "$2" ]; then echo "No <field> provided" && print_help; fi
+  if [ -z "$2" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local fieldPath=$2
 
-  if [ -z "$3" ]; then echo "No <value> provided" && print_help; fi
+  if [ -z "$3" ]; then echo "No <value> provided" && print_help && exit 1; fi
   local fieldValue=$3
 
-  if [ "$4" == "--force" ]
-  then
+  if [ "$4" == "--force" ]; then
     local force="true"
   fi
 
   # If fieldPath contains "." we assume the part before the dot is the section name and the part after is the field name in that section
-  if [[ $fieldPath == *"."* ]]
-  then
+  if [[ $fieldPath == *"."* ]]; then
     local section
     local field
 
-    section=$(cut -d'.' -f1 <<< "$fieldPath") # Split by dot and take first part as section
-    field=$(cut -d'.' -f2 <<< "$fieldPath") # Split by dot and take second part as field
+    section=$(cut -d'.' -f1 <<<"$fieldPath") # Split by dot and take first part as section
+    field=$(cut -d'.' -f2 <<<"$fieldPath")   # Split by dot and take second part as field
 
     add_secret_value "$section.$field" "$fieldValue" "$force"
   else
@@ -205,34 +195,34 @@ add() {
 }
 
 get() {
-  if [ -z "$2" ]; then echo "No <field> provided" && print_help; fi
+  if [ -z "$2" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local field=$2
 
-  op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
+  $OP item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT"
 }
 
 case $1 in
-  "help")
-    print_help
-    exit 0
-    ;;
-  "init")
-    init "$@"
-    ;;
-  "ls"|"list")
-    list "$@"
-    ;;
-  "add")
-    add "$@"
-    ;;
-  "get")
-    get "$@"
-    ;;
-  *)
-    echo "Unknown command '$1'"
-    print_help
-    exit 1
-    ;;
+"help")
+  print_help
+  exit 0
+  ;;
+"init")
+  init "$@"
+  ;;
+"ls" | "list")
+  list "$@"
+  ;;
+"add")
+  add "$@"
+  ;;
+"get")
+  get "$@"
+  ;;
+*)
+  echo "Unknown command '$1'"
+  print_help
+  exit 1
+  ;;
 esac
 
 # Restore bash error flag
