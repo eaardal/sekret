@@ -61,10 +61,8 @@ See [How to use](#how-to-use) for more info.
 
 #### The `<secret>` key format
 
-- TL;DR: Use the format `{section}.{field}` or `{field}`, where `{field}` does not contain dots (`.`). <secret> cannot containn more than one dot (`.`) which is to delimit section name from field name".
-- Use forward slash (/) or underscores (\_) to 'namespace' your fields instead of dots (.)".
-
-More: [1Password format docs](https://developer.1password.com/docs/cli/reference/management-commands/item#item-create-flags).
+- TL;DR: Use the format `<section>.<field>` or `<field>`, where `<field>` does not contain dots (`.`). `<secret>` cannot contain more than one dot (`.`) which is to delimit section name from field name". See [1Password format docs](https://developer.1password.com/docs/cli/reference/management-commands/item#item-create-flags) for more info.
+- Use forward slash (`/`) or underscores (`_`) to 'namespace' your fields instead of dots (`.`)".
 
 Example:
 
