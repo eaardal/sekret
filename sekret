@@ -1,5 +1,20 @@
 #!/bin/bash
 
+SCRIPT_PATH="$(dirname -- "$(readlink -f -- "$0")")/$(basename -- "$0")"
+prefix="$SCRIPT_PATH"
+
+debug() {
+  if [ "$DEBUG" == "true" ]; then
+    LOG_PATH="$HOME/dev/debug.log"
+
+    if [ -n "$EAARDAL_DEBUG_LOG_PATH" ]; then
+      LOG_PATH="$EAARDAL_DEBUG_LOG_PATH"
+    fi
+
+    echo "$@" >>"$LOG_PATH"
+  fi
+}
+
 print_help() {
   echo -e ""
   echo -e "Usage:"
@@ -59,30 +74,30 @@ if [ -z "$SEKRET_1PASS_ACCOUNT" ]; then
 fi
 
 if [ "$DEBUG" == "true" ]; then
-  echo "Environment:"
-  echo "------"
-  echo "SEKRET_DIR: $SEKRET_DIR"
-  echo "SECRET_ITEM: $SECRET_ITEM"
-  echo "SEKRET_1PASS_ITEM: $SEKRET_1PASS_ITEM"
-  echo "SEKRET_1PASS_VAULT: $SEKRET_1PASS_VAULT"
-  echo "SEKRET_1PASS_ACCOUNT: $SEKRET_1PASS_ACCOUNT"
-  echo "SEKRET_JQ: $SEKRET_JQ"
-  echo "JQ: $JQ"
-  echo "OP_BIOMETRIC_UNLOCK_ENABLED: $OP_BIOMETRIC_UNLOCK_ENABLED"
-  echo "Args: $*"
-  echo "Arg 0: $0"
-  echo "Arg 1: $1"
-  echo "Arg 2: $2"
-  echo "Arg 3: $3"
-  echo "Arg 4: $4"
-  echo "------"
-  echo ""
+  debug "$prefix: Environment:"
+  debug "$prefix: ------"
+  debug "$prefix: SEKRET_DIR: $SEKRET_DIR"
+  debug "$prefix: SECRET_ITEM: $SECRET_ITEM"
+  debug "$prefix: SEKRET_1PASS_ITEM: $SEKRET_1PASS_ITEM"
+  debug "$prefix: SEKRET_1PASS_VAULT: $SEKRET_1PASS_VAULT"
+  debug "$prefix: SEKRET_1PASS_ACCOUNT: $SEKRET_1PASS_ACCOUNT"
+  debug "$prefix: SEKRET_JQ: $SEKRET_JQ"
+  debug "$prefix: JQ: $JQ"
+  debug "$prefix: OP_BIOMETRIC_UNLOCK_ENABLED: $OP_BIOMETRIC_UNLOCK_ENABLED"
+  debug "$prefix: Args: $*"
+  debug "$prefix: Arg 0: $0"
+  debug "$prefix: Arg 1: $1"
+  debug "$prefix: Arg 2: $2"
+  debug "$prefix: Arg 3: $3"
+  debug "$prefix: Arg 4: $4"
+  debug "$prefix: ------"
+  debug "$prefix: "
 fi
 
 item_exists() {
   local result
 
-  # Query 1P to see if this item exists. Also redirect stderr to result to prevent the default error when an item does not exist.
+  # Query 1P to see if this item exists. Also redirect stderr to prevent the default error when an item does not exist.
   result=$(op item get "$SECRET_ITEM" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
   if [[ "$result" == *"[ERROR]"* ]] && [[ "$result" == *"isn't an item"* ]]; then
@@ -98,7 +113,7 @@ field_exists() {
 
   local result
 
-  # Query 1P to see if this field exists in the given item. Also redirect stderr to result to prevent the default error from writing to the terminal when an item does not exist.
+  # Query 1P to see if this field exists in the given item. Also redirect stderr to prevent the default error from writing to the terminal when an item does not exist.
   result=$(op item get "$SECRET_ITEM" --fields label="$fieldPath" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" 2>&1)
 
   # If the field does not exist in the item, it will throw an error like "[ERROR] 2023/06/16 14:25:34 "my.secret/to/something" isn't a field in the ".sekret" item".
