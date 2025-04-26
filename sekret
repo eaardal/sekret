@@ -237,7 +237,7 @@ get() {
   if [ -z "$2" ]; then echo "No <field> provided" && print_help && exit 1; fi
   local field=$2
 
-  value=$(op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT")
+  value=$(op item get "$SECRET_ITEM" --fields label="$field" --vault "$SEKRET_1PASS_VAULT" --account "$SEKRET_1PASS_ACCOUNT" --reveal)
 
   # Check if the value is a file by checking if the content starts with "file:".
   if [[ "$value" = file:* ]]; then
